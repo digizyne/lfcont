@@ -1,85 +1,84 @@
 package main
 
 import (
+	"compress/gzip"
 	"context"
 	"fmt"
-	"os"
+	"log"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"github.com/pulumi/pulumi-gcp/sdk/v9/go/gcp/cloudrunv2"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto"
-	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
-	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
+	"github.com/moby/moby/client"
+
+	deployment "github.com/digizyne/lfcont/internal/deployment"
 )
-
-func deploy() error {
-	createCloudRunService := func(ctx *pulumi.Context) error {
-		_, err := cloudrunv2.NewService(ctx, "automation-test-service-001", &cloudrunv2.ServiceArgs{
-			Location: pulumi.String("us-central1"),
-			Name:     pulumi.String("automation-test-service-001"),
-			Scaling: &cloudrunv2.ServiceScalingArgs{
-				MinInstanceCount: pulumi.Int(0),
-				MaxInstanceCount: pulumi.Int(1),
-				ScalingMode:      pulumi.String("AUTOMATIC"),
-			},
-			Template: &cloudrunv2.ServiceTemplateArgs{
-				Containers: cloudrunv2.ServiceTemplateContainerArray{
-					&cloudrunv2.ServiceTemplateContainerArgs{
-						Image: pulumi.String("us-central1-docker.pkg.dev/jcastle-dev/local-first-public/test1:latest"),
-					},
-				},
-			},
-		})
-		if err != nil {
-			return err
-		}
-		return nil
-	}
-
-	ctx := context.Background()
-
-	s, err := auto.UpsertStackInlineSource(ctx, "dev", "testProject", createCloudRunService)
-	if err != nil {
-		return fmt.Errorf("Failed to create or select stack: %v", err)
-	}
-
-	w := s.Workspace()
-	err = w.InstallPlugin(ctx, "gcp", "v9.3.0")
-	if err != nil {
-		return fmt.Errorf("Failed to install program plugins: %v", err)
-	}
-
-	s.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: "jcastle-dev"})
-
-	_, err = s.Refresh(ctx)
-	if err != nil {
-		return fmt.Errorf("Failed to refresh stack: %v", err)
-	}
-
-	stdoutStreamer := optup.ProgressStreams(os.Stdout)
-
-	_, err = s.Up(ctx, stdoutStreamer)
-	if err != nil {
-		return fmt.Errorf("Failed to update stack: %v", err)
-	}
-
-	fmt.Println("Deployment succeeded!")
-	return nil
-}
 
 func main() {
 	router := gin.Default()
-	router.GET("/deploy", func(c *gin.Context) {
-		err := deploy()
+
+	router.POST("container-registry", func(c *gin.Context) {
+		ctx := context.Background()
+
+		cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 		if err != nil {
-			c.JSON(500, gin.H{
+			log.Printf("Docker client error: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": "Failed to connect to Docker daemon. Is Docker running?",
+			})
+			return
+		}
+		defer cli.Close()
+
+		gzipStream := c.Request.Body
+
+		if c.ContentType() != "application/gzip" {
+			c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be application/gzip"})
+			return
+		}
+
+		gzr, err := gzip.NewReader(gzipStream)
+		if err != nil {
+			log.Printf("Gzip reader error: %v", err)
+			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{
+				"error": "Failed to create gzip reader (invalid gzip data).",
+			})
+			return
+		}
+		defer gzr.Close()
+
+		imageLoadResponse, err := cli.ImageLoad(ctx, gzr, client.ImageLoadWithQuiet(true))
+		if err != nil {
+			log.Printf("Docker ImageLoad error: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Docker ImageLoad failed. Is the tar archive a valid 'docker save' output? Error: %v", err),
+			})
+			return
+		}
+		defer imageLoadResponse.Body.Close()
+
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Image pushed to container registry",
+		})
+	})
+
+	router.POST("/deploy", func(c *gin.Context) {
+		err := deployment.Deploy()
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
 				"error": err.Error(),
 			})
 			return
 		}
-		c.JSON(200, gin.H{
-			"message": "Deployment succeeded!",
+		c.JSON(http.StatusOK, gin.H{
+			"message": "Deployment succeeded",
 		})
 	})
+
+	router.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"status": "healthy",
+		})
+	})
+
 	router.Run()
 }

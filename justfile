@@ -1,10 +1,12 @@
+set shell := ["/usr/bin/env", "bash", "-c"]
+
 default: fmt run
 
 fmt:
     go fmt ./...
 
 run:
-    go run main.go
+    air
 
 build:
     go build -o lfcont main.go
