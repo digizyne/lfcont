@@ -9,7 +9,7 @@ run:
     air
 
 build:
-    go build -o lfcont main.go
+    go build -o lfcont ./cmd/main.go
 
 tidy:
     go mod tidy

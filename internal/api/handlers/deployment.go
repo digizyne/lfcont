@@ -1,17 +1,20 @@
-package deployment
+package handlers
 
 import (
 	"context"
 	"fmt"
+	"log"
+	"net/http"
 	"os"
 
+	"github.com/gin-gonic/gin"
 	"github.com/pulumi/pulumi-gcp/sdk/v9/go/gcp/cloudrunv2"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
 )
 
-func Deploy() error {
+func Deploy(c *gin.Context) {
 	createCloudRunService := func(ctx *pulumi.Context) error {
 		_, err := cloudrunv2.NewService(ctx, "automation-test-service-001", &cloudrunv2.ServiceArgs{
 			Location: pulumi.String("us-central1"),
@@ -39,29 +42,42 @@ func Deploy() error {
 
 	s, err := auto.UpsertStackInlineSource(ctx, "dev", "testProject", createCloudRunService)
 	if err != nil {
-		return fmt.Errorf("Failed to create or select stack: %v", err)
+		log.Printf("Stack creation error: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to create or select stack: %v", err),
+		})
 	}
 
 	w := s.Workspace()
 	err = w.InstallPlugin(ctx, "gcp", "v9.3.0")
 	if err != nil {
-		return fmt.Errorf("Failed to install program plugins: %v", err)
+		log.Printf("Plugin install error: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to install GCP plugin: %v", err),
+		})
 	}
 
 	s.SetConfig(ctx, "gcp:project", auto.ConfigValue{Value: "jcastle-dev"})
 
 	_, err = s.Refresh(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to refresh stack: %v", err)
+		log.Printf("Refresh error: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to refresh stack: %v", err),
+		})
 	}
 
 	stdoutStreamer := optup.ProgressStreams(os.Stdout)
 
 	_, err = s.Up(ctx, stdoutStreamer)
 	if err != nil {
-		return fmt.Errorf("Failed to update stack: %v", err)
+		log.Printf("Deployment error: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to update stack: %v", err),
+		})
 	}
 
-	fmt.Println("Deployment succeeded!")
-	return nil
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Deployment succeeded",
+	})
 }
