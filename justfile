@@ -1,21 +1,24 @@
 set shell := ["/usr/bin/env", "bash", "-c"]
 
-default: fmt run
+default: fmt up
 
 fmt:
     go fmt ./...
 
-run:
-    air
+up:
+    docker compose up
+
+down:
+    docker compose down --rmi local --remove-orphans
 
 build:
-    go build -o lfcont ./cmd/main.go
+    go build -o ~/go/bin/lfcont ./cmd/main.go
+
+build-docker:
+    docker build -t lfcont:dev -f Dockerfile .
 
 tidy:
     go mod tidy
 
 add PACKAGE:
     go get -u {{PACKAGE}}
-
-install:
-    go install -o lf github.com/digizyne/local-first

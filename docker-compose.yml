@@ -1,0 +1,14 @@
+name: lfcont
+services:
+  controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: lfcont
+    volumes:
+      - ./:/app
+    working_dir: /app
+    ports:
+      - "8080:8080"
+    command: ["air", "-c", ".air.toml"]
