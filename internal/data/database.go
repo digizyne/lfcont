@@ -17,10 +17,10 @@ func InitializeDatabase() (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %v", err)
 	}
-	defer pool.Close()
 
 	err = models.MigrateUserTable(pool)
 	if err != nil {
+		pool.Close() // Close on error
 		return nil, fmt.Errorf("failed to migrate user table: %v", err)
 	}
 

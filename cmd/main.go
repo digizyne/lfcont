@@ -5,8 +5,9 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	routes "github.com/digizyne/lfcont/internal/api"
-	data "github.com/digizyne/lfcont/internal/data"
+	"github.com/digizyne/lfcont/internal/api"
+	"github.com/digizyne/lfcont/internal/data"
+	"github.com/digizyne/lfcont/tools"
 )
 
 func main() {
@@ -15,7 +16,9 @@ func main() {
 		log.Fatalf("Failed to initialize database: %v", err)
 	}
 	defer pool.Close()
+
+	appRouter := tools.NewAppRouter(pool)
 	router := gin.Default()
-	routes.RegisterRoutes(router)
+	api.RegisterRoutes(router, appRouter)
 	router.Run("0.0.0.0:8080")
 }

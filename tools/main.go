@@ -6,8 +6,19 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moby/moby/client"
 )
+
+type AppRouter struct {
+	Pool *pgxpool.Pool
+}
+
+func NewAppRouter(pool *pgxpool.Pool) *AppRouter {
+	return &AppRouter{
+		Pool: pool,
+	}
+}
 
 type ImageDetails struct {
 	ImageID   string
