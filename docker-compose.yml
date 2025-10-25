@@ -11,4 +11,16 @@ services:
     working_dir: /app
     ports:
       - "8080:8080"
+    depends_on:
+      - postgres
     command: ["air", "-c", ".air.toml"]
+
+  postgres:
+    image: postgres
+    container_name: lfcont-db
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
