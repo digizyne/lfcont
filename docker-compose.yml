@@ -12,8 +12,13 @@ services:
     ports:
       - "8080:8080"
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+        required: false
     command: ["air", "-c", ".air.toml"]
+    profiles:
+      - dev
+      - local
 
   postgres:
     image: postgres
@@ -24,3 +29,5 @@ services:
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    profiles:
+      - local

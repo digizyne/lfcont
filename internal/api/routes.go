@@ -7,8 +7,8 @@ import (
 	"github.com/digizyne/lfcont/tools"
 )
 
-func RegisterRoutes(router *gin.Engine, appRouter *tools.AppRouter) {
-	router.GET("/ping", handlers.CheckHealth(appRouter))
+func RegisterRoutes(router *gin.Engine, app *tools.App) {
+	router.GET("/ping", handlers.CheckHealth(app))
 
 	// apiv1 := router.Group("/api/v1")
 	// apiv1.POST("/container-registry", handlers.PushToContainerRegistry)

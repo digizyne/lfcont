@@ -17,8 +17,8 @@ func main() {
 	}
 	defer pool.Close()
 
-	appRouter := tools.NewAppRouter(pool)
+	app := tools.InitializeApp(pool)
 	router := gin.Default()
-	api.RegisterRoutes(router, appRouter)
+	api.RegisterRoutes(router, app)
 	router.Run("0.0.0.0:8080")
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	models "github.com/digizyne/lfcont/internal/data/models"
+	"github.com/digizyne/lfcont/internal/data/models"
 )
 
 func InitializeDatabase() (*pgxpool.Pool, error) {
@@ -18,11 +18,23 @@ func InitializeDatabase() (*pgxpool.Pool, error) {
 		return nil, fmt.Errorf("unable to create connection pool: %v", err)
 	}
 
-	err = models.MigrateUserTable(pool)
-	if err != nil {
-		pool.Close() // Close on error
-		return nil, fmt.Errorf("failed to migrate user table: %v", err)
+	migrations := []struct {
+		name string
+		fn   func(*pgxpool.Pool) error
+	}{
+		{"users", models.MigrateUserTable},
+		{"container_images", models.MigrateContainerImageTable},
+		{"deployments", models.MigrateDeploymentTable},
 	}
 
+	for _, migration := range migrations {
+		log.Printf("Running migration: %s", migration.name)
+		if err := migration.fn(pool); err != nil {
+			pool.Close()
+			return nil, fmt.Errorf("failed to migrate %s table: %v", migration.name, err)
+		}
+	}
+
+	log.Printf("Database migrations completed successfully")
 	return pool, nil
 }

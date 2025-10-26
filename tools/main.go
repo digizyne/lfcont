@@ -10,12 +10,12 @@ import (
 	"github.com/moby/moby/client"
 )
 
-type AppRouter struct {
+type App struct {
 	Pool *pgxpool.Pool
 }
 
-func NewAppRouter(pool *pgxpool.Pool) *AppRouter {
-	return &AppRouter{
+func InitializeApp(pool *pgxpool.Pool) *App {
+	return &App{
 		Pool: pool,
 	}
 }
