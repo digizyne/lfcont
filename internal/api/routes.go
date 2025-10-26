@@ -10,7 +10,7 @@ import (
 func RegisterRoutes(router *gin.Engine, app *tools.App) {
 	router.GET("/ping", handlers.CheckHealth(app))
 
-	// apiv1 := router.Group("/api/v1")
-	// apiv1.POST("/container-registry", handlers.PushToContainerRegistry)
+	apiv1 := router.Group("/api/v1")
+	apiv1.POST("/container-registry", handlers.PushToContainerRegistry(app))
 	// apiv1.POST("/deploy", handlers.Deploy)
 }

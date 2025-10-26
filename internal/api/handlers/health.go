@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -20,9 +19,9 @@ func CheckHealth(app *tools.App) gin.HandlerFunc {
 			})
 			return
 		}
-		fmt.Printf("Postgres version: %s", version)
 		c.JSON(http.StatusOK, gin.H{
-			"status": "healthy",
+			"status":    "healthy",
+			"dbVersion": version,
 		})
 	}
 }
