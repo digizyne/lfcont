@@ -8,6 +8,9 @@ fmt:
 up:
     docker compose --profile dev up
 
+up-local:
+    docker compose --profile local up
+
 down:
     docker compose down --rmi local --remove-orphans
 

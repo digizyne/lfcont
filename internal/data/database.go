@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -13,7 +14,8 @@ import (
 func InitializeDatabase() (*pgxpool.Pool, error) {
 	log.Printf("Initializing database...")
 	ctx := context.Background()
-	pool, err := pgxpool.New(ctx, "postgresql://postgres:postgres@postgres:5432/postgres")
+	postgresConnectionString := os.Getenv("POSTGRES_CONNECTION_STRING")
+	pool, err := pgxpool.New(ctx, postgresConnectionString)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create connection pool: %v", err)
 	}

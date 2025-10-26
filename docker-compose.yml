@@ -16,6 +16,8 @@ services:
         condition: service_healthy
         required: false
     command: ["air", "-c", ".air.toml"]
+    env_file:
+      - .env
     profiles:
       - dev
       - local
