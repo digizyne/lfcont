@@ -7,7 +7,6 @@ import (
 
 	"github.com/digizyne/lfcont/internal/api"
 	"github.com/digizyne/lfcont/internal/data"
-	"github.com/digizyne/lfcont/tools"
 )
 
 func main() {
@@ -17,8 +16,7 @@ func main() {
 	}
 	defer pool.Close()
 
-	app := tools.InitializeApp(pool)
 	router := gin.Default()
-	api.RegisterRoutes(router, app)
+	api.InitializeApp(router, pool)
 	router.Run("0.0.0.0:8080")
 }

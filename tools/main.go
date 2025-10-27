@@ -6,19 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/moby/moby/client"
 )
-
-type App struct {
-	Pool *pgxpool.Pool
-}
-
-func InitializeApp(pool *pgxpool.Pool) *App {
-	return &App{
-		Pool: pool,
-	}
-}
 
 type ImageDetails struct {
 	ImageID   string

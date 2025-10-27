@@ -4,10 +4,12 @@ go 1.25.3
 
 require (
 	github.com/gin-gonic/gin v1.11.0
+	github.com/golang-jwt/jwt/v5 v5.2.2
 	github.com/jackc/pgx/v5 v5.7.6
 	github.com/moby/moby/client v0.1.0-beta.2
 	github.com/pulumi/pulumi-gcp/sdk/v9 v9.3.0
 	github.com/pulumi/pulumi/sdk/v3 v3.203.0
+	golang.org/x/crypto v0.43.0
 )
 
 require (
@@ -123,7 +125,6 @@ require (
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/mock v0.5.0 // indirect
 	golang.org/x/arch v0.20.0 // indirect
-	golang.org/x/crypto v0.43.0 // indirect
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/net v0.45.0 // indirect

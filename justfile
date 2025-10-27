@@ -12,7 +12,10 @@ up-local:
     docker compose --profile local up
 
 down:
-    docker compose down --rmi local --remove-orphans
+    docker compose --profile dev down --rmi local --remove-orphans
+
+down-local:
+    docker compose --profile local down --rmi local --remove-orphans
 
 build:
     go build -o ~/go/bin/lfcont ./cmd/main.go
