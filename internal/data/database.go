@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -13,7 +14,8 @@ import (
 
 func InitializeDatabase() (*pgxpool.Pool, error) {
 	log.Printf("Initializing database...")
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 	postgresConnectionString := os.Getenv("POSTGRES_CONNECTION_STRING")
 	pool, err := pgxpool.New(ctx, postgresConnectionString)
 	if err != nil {

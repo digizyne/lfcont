@@ -4,7 +4,6 @@ import (
 	"compress/gzip"
 	"context"
 	"fmt"
-	"io"
 	"log"
 	"net/http"
 	"os"
@@ -13,11 +12,18 @@ import (
 	"github.com/moby/moby/client"
 
 	"github.com/digizyne/lfcont/tools"
+
+	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/daemon"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
+
+	"github.com/google/go-containerregistry/pkg/authn"
 )
 
 func (app *App) pushToContainerRegistry(c *gin.Context) {
 	ctx := context.Background()
 
+	// Initialize Docker client
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		log.Printf("Docker client error: %v", err)
@@ -28,13 +34,12 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 	}
 	defer cli.Close()
 
+	// Read gzip stream from request body
 	gzipStream := c.Request.Body
-
 	if c.ContentType() != "application/gzip" {
 		c.AbortWithStatusJSON(http.StatusUnsupportedMediaType, gin.H{"error": "Content-Type must be application/gzip"})
 		return
 	}
-
 	gzr, err := gzip.NewReader(gzipStream)
 	if err != nil {
 		log.Printf("Gzip reader error: %v", err)
@@ -45,6 +50,7 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 	}
 	defer gzr.Close()
 
+	// Load image into Docker daemon
 	imageLoadResponse, err := cli.ImageLoad(ctx, gzr, client.ImageLoadWithQuiet(true))
 	if err != nil {
 		log.Printf("Docker ImageLoad error: %v", err)
@@ -55,6 +61,7 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 	}
 	defer imageLoadResponse.Body.Close()
 
+	// Get image details (specifically image ID and name so that we can tag it)
 	imageDetails, err := tools.GetContainerImageDetails(imageLoadResponse)
 	if err != nil {
 		log.Printf("Error getting image details: %v", err)
@@ -63,10 +70,10 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 		})
 		return
 	}
-
 	imageID := imageDetails.ImageID
 	imageName := imageDetails.ImageName
 
+	// Tag image for target registry
 	arRepoUrl := os.Getenv("AR_REPO_URL")
 	targetTag := fmt.Sprintf("%s/%s:latest", arRepoUrl, imageName)
 	err = cli.ImageTag(ctx, imageID, targetTag)
@@ -78,23 +85,33 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 		return
 	}
 
-	pushOutput, err := cli.ImagePush(ctx, targetTag, client.ImagePushOptions{})
+	// Get image from local Docker daemon
+	imageRef, err := name.ParseReference(targetTag)
 	if err != nil {
-		log.Printf("Docker ImagePush error: %v", err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Docker ImagePush failed: %v", err),
-		})
-		return
+		log.Fatalf("Failed to parse source reference: %v", err)
 	}
-	defer pushOutput.Close()
-
-	pushOutputBytes, err := io.ReadAll(pushOutput)
+	img, err := daemon.Image(imageRef)
 	if err != nil {
-		log.Printf("Error reading push output: %v", err)
-	} else {
-		log.Printf("Image push output: %s", string(pushOutputBytes))
+		log.Fatalf("Failed to read image from local Docker daemon. Ensure Docker is running and image '%s' exists. Error: %v", imageRef, err)
 	}
 
+	// Authenticate to Artifact Registry using Service Account key
+	key, err := os.ReadFile("./sakey.json")
+	if err != nil {
+		log.Fatalf("Failed to read Service Account key file: %v", err)
+	}
+	auth := authn.FromConfig(authn.AuthConfig{
+		Username: "_json_key",
+		Password: string(key),
+	})
+
+	// Push image to Artifact Registry
+	err = remote.Write(imageRef, img, remote.WithAuth(auth), remote.WithContext(ctx))
+	if err != nil {
+		log.Fatalf("Image push failed! Error: %v", err)
+	}
+
+	// Record pushed image in database
 	_, err = app.Pool.Exec(ctx, `
 			INSERT INTO container_images (fqin, username)
 			VALUES ($1, $2)
