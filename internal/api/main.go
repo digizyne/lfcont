@@ -19,5 +19,5 @@ func InitializeApp(router *gin.Engine, pool *pgxpool.Pool) {
 	auth.POST("/register", app.register)
 	auth.POST("/login", app.login)
 	apiv1.POST("/container-registry", app.pushToContainerRegistry)
-	// apiv1.POST("/deploy", Deploy)
+	apiv1.POST("/deploy", app.deploy)
 }

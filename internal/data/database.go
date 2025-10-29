@@ -13,7 +13,6 @@ import (
 )
 
 func InitializeDatabase() (*pgxpool.Pool, error) {
-	log.Printf("Initializing database...")
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	postgresConnectionString := os.Getenv("POSTGRES_CONNECTION_STRING")
@@ -39,6 +38,5 @@ func InitializeDatabase() (*pgxpool.Pool, error) {
 		}
 	}
 
-	log.Printf("Database migrations completed successfully")
 	return pool, nil
 }

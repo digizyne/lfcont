@@ -1,7 +1,9 @@
 FROM golang:1.25.3-trixie AS development
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download && go install github.com/air-verse/air@latest
+COPY go.mod go.sum sakey.json ./
+ENV GOOGLE_APPLICATION_CREDENTIALS=/app/sakey.json
+RUN go mod download && go install github.com/air-verse/air@latest && curl -fsSL https://get.pulumi.com | sh && /root/.pulumi/bin/pulumi login gs://lf-controller-pulumi-state-staging
+ENV PATH="/root/.pulumi/bin:${PATH}" 
 COPY . .
 
 FROM development AS build
