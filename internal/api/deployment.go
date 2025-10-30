@@ -9,7 +9,6 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/pulumi/pulumi-gcp/sdk/v9/go/gcp/cloudrunv2"
-	"github.com/pulumi/pulumi-gcp/sdk/v9/go/gcp/projects"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto"
 	"github.com/pulumi/pulumi/sdk/v3/go/auto/optup"
 	"github.com/pulumi/pulumi/sdk/v3/go/pulumi"
@@ -37,18 +36,14 @@ func (app *App) deploy(c *gin.Context) {
 			return err
 		}
 
-		_, err = projects.NewIAMBinding(ctx, "public-access", &projects.IAMBindingArgs{
-			Project: pulumi.String("local-first-476300"),
-			Role:    pulumi.String("roles/run.invoker"),
+		// Allow public access using Cloud Run service IAM policy
+		_, err = cloudrunv2.NewServiceIamBinding(ctx, "public-access", &cloudrunv2.ServiceIamBindingArgs{
+			Project:  pulumi.String("local-first-476300"),
+			Location: pulumi.String("us-central1"),
+			Name:     service.Name,
+			Role:     pulumi.String("roles/run.invoker"),
 			Members: pulumi.StringArray{
 				pulumi.String("allUsers"),
-			},
-			Condition: &projects.IAMBindingConditionArgs{
-				Title:       pulumi.String("Public access to Cloud Run service"),
-				Description: pulumi.String("Allow public access to the automation-test-service-001"),
-				Expression: service.Name.ApplyT(func(name string) string {
-					return fmt.Sprintf("resource.name == \"projects/local-first-476300/locations/us-central1/services/%s\"", name)
-				}).(pulumi.StringOutput),
 			},
 		})
 		if err != nil {
