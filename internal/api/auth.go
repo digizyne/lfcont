@@ -94,7 +94,6 @@ func (app *App) login(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "login successful",
-		"token":   tokenString,
+		"token": tokenString,
 	})
 }

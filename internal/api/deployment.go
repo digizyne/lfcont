@@ -19,12 +19,11 @@ func (app *App) deploy(c *gin.Context) {
 		service, err := cloudrunv2.NewService(ctx, "automation-test-service-001", &cloudrunv2.ServiceArgs{
 			Location: pulumi.String("us-central1"),
 			Name:     pulumi.String("automation-test-service-001"),
-			Scaling: &cloudrunv2.ServiceScalingArgs{
-				MinInstanceCount: pulumi.Int(0),
-				MaxInstanceCount: pulumi.Int(1),
-				ScalingMode:      pulumi.String("AUTOMATIC"),
-			},
 			Template: &cloudrunv2.ServiceTemplateArgs{
+				Scaling: &cloudrunv2.ServiceTemplateScalingArgs{
+					MinInstanceCount: pulumi.Int(0),
+					MaxInstanceCount: pulumi.Int(1),
+				},
 				Containers: cloudrunv2.ServiceTemplateContainerArray{
 					&cloudrunv2.ServiceTemplateContainerArgs{
 						Image: pulumi.String("us-central1-docker.pkg.dev/local-first-476300/container-images-dev/api:latest"),
