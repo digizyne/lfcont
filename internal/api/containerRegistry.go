@@ -7,8 +7,10 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/moby/moby/client"
 
 	"github.com/digizyne/lfcont/tools"
@@ -22,6 +24,53 @@ import (
 
 func (app *App) pushToContainerRegistry(c *gin.Context) {
 	ctx := context.Background()
+
+	// Check for Bearer token in Authorization header
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "authorization header required",
+		})
+		return
+	}
+
+	// Extract Bearer token
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "authorization header must contain Bearer token",
+		})
+		return
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	// Parse and validate JWT token
+	jwtSecret := os.Getenv("JWT_SECRET")
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// Verify the signing method
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(jwtSecret), nil
+	})
+
+	if err != nil {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error":   "invalid token",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	// Extract and validate claims
+	userClaims, ok := token.Claims.(*UserClaims)
+	if !ok || !token.Valid {
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+			"error": "invalid token claims",
+		})
+		return
+	}
+
+	log.Printf("Authenticated user: %s", userClaims.Username)
 
 	// Initialize Docker client
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
@@ -115,7 +164,7 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 	_, err = app.Pool.Exec(ctx, `
 			INSERT INTO container_images (fqin, username)
 			VALUES ($1, $2)
-		`, targetTag, "jfcastel00")
+		`, targetTag, userClaims.Username)
 	if err != nil {
 		log.Printf("DB insert error: %v", err)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
