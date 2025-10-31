@@ -4,10 +4,47 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/moby/moby/client"
 )
+
+type UserClaims struct {
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+func GetUserClaims(authHeader string) (*UserClaims, error) {
+	if authHeader == "" {
+		return nil, fmt.Errorf("authorization header required")
+	}
+
+	if !strings.HasPrefix(authHeader, "Bearer ") {
+		return nil, fmt.Errorf("authorization header must contain Bearer token")
+	}
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+
+	jwtSecret := os.Getenv("JWT_SECRET")
+	token, err := jwt.ParseWithClaims(tokenString, &UserClaims{}, func(token *jwt.Token) (any, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
+		}
+		return []byte(jwtSecret), nil
+	})
+
+	if err != nil {
+		return nil, fmt.Errorf("invalid token: %v", err)
+	}
+
+	userClaims, ok := token.Claims.(*UserClaims)
+	if !ok || !token.Valid {
+		return nil, fmt.Errorf("invalid token claims")
+	}
+
+	return userClaims, nil
+}
 
 type ImageDetails struct {
 	ImageID   string
@@ -45,11 +82,11 @@ func GetContainerImageDetails(imageLoadResponse client.LoadResponse) (ImageDetai
 	}
 
 	if err := scanner.Err(); err != nil {
-		return ImageDetails{}, fmt.Errorf("Error reading ImageLoad response: %v", err)
+		return ImageDetails{}, fmt.Errorf("error reading ImageLoad response: %v", err)
 	}
 
 	if imageID == "" {
-		return ImageDetails{}, fmt.Errorf("Could not extract image ID from ImageLoad response")
+		return ImageDetails{}, fmt.Errorf("could not extract image ID from ImageLoad response")
 	}
 
 	imageName := strings.Split(imageID, ":")[0]
