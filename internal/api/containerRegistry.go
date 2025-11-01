@@ -18,6 +18,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote"
 
 	"github.com/google/go-containerregistry/pkg/authn"
+	"github.com/google/uuid"
 )
 
 func (app *App) pushToContainerRegistry(c *gin.Context) {
@@ -86,7 +87,9 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 
 	// Tag image for target registry
 	arRepoUrl := os.Getenv("AR_REPO_URL")
-	targetTag := fmt.Sprintf("%s/%s:latest", arRepoUrl, imageName)
+	uuid := uuid.New().String()
+	shortTag := uuid[:8]
+	targetTag := fmt.Sprintf("%s/%s:%s", arRepoUrl, imageName, shortTag)
 	err = cli.ImageTag(ctx, imageID, targetTag)
 	if err != nil {
 		log.Printf("Docker ImageTag error: %v", err)
@@ -95,6 +98,30 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 		})
 		return
 	}
+
+	// TODO: Change this logic and/or the data model now that we're using unique tags
+	// Check if targetTag already exists in DB and is owned by a different user
+	// var existingUser string
+	// err = app.Pool.QueryRow(ctx, `
+	// 	SELECT COALESCE(
+	// 		(SELECT username FROM container_images WHERE fqin = $1 LIMIT 1),
+	// 		''
+	// 	)
+	// `, targetTag).Scan(&existingUser)
+	// if err != nil {
+	// 	log.Printf("DB query error: %v", err)
+	// 	c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+	// 		"error": fmt.Sprintf("Database error while checking existing image: %v", err),
+	// 	})
+	// 	return
+	// }
+	// if existingUser != "" && existingUser != userClaims.Username {
+	// 	log.Printf("Image %s already exists and is owned by another user", targetTag)
+	// 	c.AbortWithStatusJSON(http.StatusConflict, gin.H{
+	// 		"error": "Image already exists and is owned by another user",
+	// 	})
+	// 	return
+	// }
 
 	// Get image from local Docker daemon
 	imageRef, err := name.ParseReference(targetTag)

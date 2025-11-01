@@ -42,6 +42,37 @@ func (app *App) deploy(c *gin.Context) {
 		return
 	}
 
+	// Check for existing deployment with the same name
+	updateNeeded := false
+	rows, err := app.Pool.Query(c.Request.Context(), `SELECT username FROM deployments WHERE name=$1`, req.Name)
+	if err != nil {
+		log.Printf("DB query error: %v", err)
+		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+			"error": fmt.Sprintf("Failed to check existing deployments: %v", err),
+		})
+		return
+	}
+	defer rows.Close()
+
+	var existingUsername string
+	if rows.Next() {
+		if err := rows.Scan(&existingUsername); err != nil {
+			log.Printf("DB scan error: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Failed to read existing deployment: %v", err),
+			})
+			return
+		}
+		if existingUsername != userClaims.Username {
+			log.Printf("Deployment name %s already owned by %s", req.Name, existingUsername)
+			c.AbortWithStatusJSON(http.StatusConflict, gin.H{
+				"error": "Deployment name already in use by another user",
+			})
+			return
+		}
+		updateNeeded = true
+	}
+
 	createCloudRunService := func(ctx *pulumi.Context) error {
 		service, err := cloudrunv2.NewService(ctx, req.Name, &cloudrunv2.ServiceArgs{
 			Location:           pulumi.String("us-central1"),
@@ -176,17 +207,34 @@ func (app *App) deploy(c *gin.Context) {
 	// Log the resource changes for debugging
 	log.Printf("Deployment completed successfully. Resource changes: %+v", resourceChanges)
 
-	// Record new deployment in database
-	_, err = app.Pool.Exec(ctx, `
-			INSERT INTO deployments (name, url, tier, container_image, username)
-			VALUES ($1, $2, $3, $4, $5)
-		`, req.Name, serviceUrl, req.Tier, req.ContainerImage, userClaims.Username)
-	if err != nil {
-		log.Printf("DB insert error: %v", err)
-		c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
-			"error": fmt.Sprintf("Failed to record image in database: %v", err),
+	// Record deployment in database
+	if updateNeeded {
+		_, err := app.Pool.Exec(ctx, `UPDATE deployments SET container_image=$1 WHERE name=$2`, req.ContainerImage, req.Name)
+		if err != nil {
+			log.Printf("DB update error: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Failed to update deployment record: %v", err),
+			})
+			return
+		}
+
+		log.Printf("Deployment %s updated with new container image %s", req.Name, req.ContainerImage)
+		c.JSON(http.StatusOK, gin.H{
+			"service_url": serviceUrl,
 		})
 		return
+	} else {
+		_, err = app.Pool.Exec(ctx, `
+				INSERT INTO deployments (name, url, tier, container_image, username)
+				VALUES ($1, $2, $3, $4, $5) 
+			`, req.Name, serviceUrl, req.Tier, req.ContainerImage, userClaims.Username)
+		if err != nil {
+			log.Printf("DB insert error: %v", err)
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+				"error": fmt.Sprintf("Failed to record deployment in database: %v", err),
+			})
+			return
+		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
