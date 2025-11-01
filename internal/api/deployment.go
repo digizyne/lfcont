@@ -190,9 +190,6 @@ func (app *App) deploy(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":          "Deployment succeeded",
-		"service_url":      serviceUrl,
-		"resource_changes": resourceChanges,
-		"total_operations": totalChanges,
+		"service_url": serviceUrl,
 	})
 }

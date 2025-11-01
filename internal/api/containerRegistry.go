@@ -137,6 +137,6 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 
 	log.Printf("Successfully pushed image %s to registry", targetTag)
 	c.JSON(http.StatusOK, gin.H{
-		"message": fmt.Sprintf("Image successfully pushed to registry as %s", targetTag),
+		"fqin": targetTag,
 	})
 }
