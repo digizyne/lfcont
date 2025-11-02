@@ -7,6 +7,7 @@ import (
 
 	"github.com/digizyne/lfcont/internal/api"
 	"github.com/digizyne/lfcont/internal/data"
+	"github.com/gin-contrib/cors"
 )
 
 func main() {
@@ -16,7 +17,16 @@ func main() {
 	}
 	defer pool.Close()
 
+	corsConfig := cors.Config{
+		AllowOrigins:     []string{"http://localhost:3000"},
+		AllowMethods:     []string{"GET", "POST", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: true,
+	}
+
 	router := gin.Default()
+	router.Use(cors.New(corsConfig))
 	api.InitializeApp(router, pool)
 	router.Run("0.0.0.0:8080")
 }

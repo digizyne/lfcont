@@ -93,6 +93,17 @@ func (app *App) login(c *gin.Context) {
 		return
 	}
 
+	// Set auth token as HTTP-only cookie that expires in 1 hour
+	c.SetCookie(
+		"auth.token", // name
+		tokenString,  // value
+		3600,         // max age in seconds (1 hour)
+		"/",          // path
+		"",           // domain (empty = current domain)
+		false,        // secure (set to true in production with HTTPS)
+		true,         // httpOnly (prevents XSS access via JavaScript)
+	)
+
 	c.JSON(200, gin.H{
 		"token": tokenString,
 	})
