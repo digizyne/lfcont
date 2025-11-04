@@ -15,9 +15,16 @@ func InitializeApp(router *gin.Engine, pool *pgxpool.Pool) {
 	router.GET("/health", app.CheckHealth)
 
 	apiv1 := router.Group("/api/v1")
+
 	auth := apiv1.Group("/auth")
 	auth.POST("/register", app.register)
 	auth.POST("/login", app.login)
-	apiv1.POST("/container-registry", app.pushToContainerRegistry)
-	apiv1.POST("/deploy", app.deploy)
+
+	containerImages := apiv1.Group("/container-images")
+	containerImages.POST("", app.pushToContainerRegistry)
+
+	deployments := apiv1.Group("/deployments")
+	deployments.GET("/:name", app.getDeploymentByName)
+	deployments.GET("", app.listDeployments)
+	deployments.POST("", app.deploy)
 }
