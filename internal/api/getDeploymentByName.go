@@ -143,7 +143,7 @@ func (app *App) getDeploymentByName(c *gin.Context) {
 
 	// Build response
 	details := CloudRunServiceDetails{
-		Name:        service.Name,
+		Name:        deploymentName,
 		URL:         serviceURL,
 		Image:       containerImage,
 		Location:    location,
@@ -158,8 +158,9 @@ func (app *App) getDeploymentByName(c *gin.Context) {
 
 	// Determine status
 	if len(service.Conditions) > 0 {
+		fmt.Println("service conditions good: ", service.Conditions)
 		for _, condition := range service.Conditions {
-			if condition.Type == "Ready" {
+			if condition.Type == "Ready" || condition.Type == "RoutesReady" {
 				if condition.State == runpb.Condition_CONDITION_SUCCEEDED {
 					details.Status = "Ready"
 				} else {
