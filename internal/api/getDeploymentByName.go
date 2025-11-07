@@ -257,6 +257,7 @@ func getHourlyRequests(ctx context.Context, client *monitoring.MetricClient, pro
 		if value, exists := dataPoints[i]; exists {
 			hourlyRequests[i] = int(value)
 		}
+		// hourlyRequests[i] += int(i)
 		// If no data exists for that hour, it remains 0
 	}
 
