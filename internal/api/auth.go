@@ -93,35 +93,7 @@ func (app *App) login(c *gin.Context) {
 		return
 	}
 
-	// Set auth token as HTTP-only cookie that expires in 1 hour
-	c.SetCookie(
-		"auth.token", // name
-		tokenString,  // value
-		3600,         // max age in seconds (1 hour)
-		"/",          // path
-		"",           // domain (empty = current domain)
-		false,        // secure (set to true in production with HTTPS)
-		true,         // httpOnly (prevents XSS access via JavaScript)
-	)
-
 	c.JSON(200, gin.H{
 		"token": tokenString,
-	})
-}
-
-func (app *App) logout(c *gin.Context) {
-	// Clear the auth token cookie by setting its max age to -1
-	c.SetCookie(
-		"auth.token", // name
-		"",           // value
-		-1,           // max age in seconds (immediate expiration)
-		"/",          // path
-		"",           // domain (empty = current domain)
-		false,        // secure (set to true in production with HTTPS)
-		true,         // httpOnly (prevents XSS access via JavaScript)
-	)
-
-	c.JSON(200, gin.H{
-		"message": "logged out successfully",
 	})
 }
