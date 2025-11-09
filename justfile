@@ -23,6 +23,9 @@ build:
 build-docker:
     docker build -t lfcont:dev -f Dockerfile .
 
+run-docker:
+    docker run -it --rm --name lfcont -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock lfcont:dev
+
 tidy:
     go mod tidy
 
