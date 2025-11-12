@@ -18,7 +18,7 @@ func main() {
 	defer pool.Close()
 
 	corsConfig := cors.Config{
-		AllowOrigins:  []string{"http://localhost:3000"},
+		AllowOrigins:  []string{"*"},
 		AllowMethods:  []string{"GET", "POST", "OPTIONS"},
 		AllowHeaders:  []string{"Origin", "Content-Type", "Authorization"},
 		ExposeHeaders: []string{"Content-Length"},

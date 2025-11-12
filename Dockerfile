@@ -8,10 +8,10 @@ COPY . .
 
 FROM development AS build
 ENV CGO_ENABLED=0 GOOS=linux
-RUN go build -ldflags "-s -w" -o /app/lfcont ./cmd/main.go
+RUN go build -ldflags "-s -w" -o /app/controller ./cmd/main.go
 
 FROM gcr.io/distroless/static AS production
 WORKDIR /app
-COPY --from=build /app/lfcont .
+COPY --from=build /app/controller .
 EXPOSE 8080
-CMD ["./lfcont"]
+CMD ["./controller"]

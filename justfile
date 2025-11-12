@@ -18,13 +18,21 @@ down-local:
     docker compose --profile local down --rmi local --remove-orphans
 
 build:
-    go build -o ~/go/bin/lfcont ./cmd/main.go
+    go build -o ~/go/bin/controller ./cmd/main.go
+
+ar-push: build-docker tag push
 
 build-docker:
-    docker build -t lfcont:dev -f Dockerfile .
+    docker build -t controller:dev -f Dockerfile .
 
 run-docker:
-    docker run -it --rm --name lfcont -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock lfcont:dev
+    docker run -it --rm --name controller -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock controller:dev
+
+tag:
+    docker tag controller:dev us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:dev
+
+push:
+    docker push us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:dev
 
 tidy:
     go mod tidy
