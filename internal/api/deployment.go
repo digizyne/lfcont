@@ -78,6 +78,10 @@ func (app *App) deploy(c *gin.Context) {
 			Location:           pulumi.String("us-central1"),
 			Name:               pulumi.String(req.Name),
 			DeletionProtection: pulumi.Bool(false),
+			Scaling: &cloudrunv2.ServiceScalingArgs{
+				MinInstanceCount: pulumi.Int(0),
+				MaxInstanceCount: pulumi.Int(1),
+			},
 			Template: &cloudrunv2.ServiceTemplateArgs{
 				Scaling: &cloudrunv2.ServiceTemplateScalingArgs{
 					MinInstanceCount: pulumi.Int(0),
