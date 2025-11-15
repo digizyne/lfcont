@@ -99,6 +99,15 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 		return
 	}
 
+	// Delete original image before tagging from local Docker daemon to free up space
+	_, err = cli.ImageRemove(ctx, imageID, client.ImageRemoveOptions{
+		Force:         true,
+		PruneChildren: true,
+	})
+	if err != nil {
+		log.Printf("Warning: failed to remove original image %s from local Docker daemon: %v", imageID, err)
+	}
+
 	// TODO: Change this logic and/or the data model now that we're using unique tags
 	// Check if targetTag already exists in DB and is owned by a different user
 	// var existingUser string
@@ -147,6 +156,15 @@ func (app *App) pushToContainerRegistry(c *gin.Context) {
 	err = remote.Write(imageRef, img, remote.WithAuth(auth), remote.WithContext(ctx))
 	if err != nil {
 		log.Fatalf("Image push failed! Error: %v", err)
+	}
+
+	// Delete image from local Docker daemon to free up space
+	_, err = cli.ImageRemove(ctx, targetTag, client.ImageRemoveOptions{
+		Force:         true,
+		PruneChildren: true,
+	})
+	if err != nil {
+		log.Printf("Warning: failed to remove image %s from local Docker daemon: %v", targetTag, err)
 	}
 
 	// Record pushed image in database

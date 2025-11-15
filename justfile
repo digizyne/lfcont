@@ -20,7 +20,7 @@ down-local:
 build:
     go build -o ~/go/bin/controller ./cmd/main.go
 
-ar-push: build-docker tag push
+ar-push TAG: build-docker (tag TAG) (push TAG)
 
 build-docker:
     docker build -t controller:dev -f Dockerfile .
@@ -28,11 +28,11 @@ build-docker:
 run-docker:
     docker run -it --rm --name controller -p 8080:8080 -v /var/run/docker.sock:/var/run/docker.sock controller:dev
 
-tag:
-    docker tag controller:dev us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:dev
+tag TAG:
+    docker tag controller:dev us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:{{TAG}}
 
-push:
-    docker push us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:dev
+push TAG:
+    docker push us-central1-docker.pkg.dev/local-first-476300/open-source-application-images/controller:{{TAG}}
 
 tidy:
     go mod tidy
